@@ -14,9 +14,10 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.armi.app",
       "infoPlist": {
+        "UIDeviceFamily": [1],
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "ARMi needs access to your photo library to let you pick a profile picture.",
         "NSCameraUsageDescription": "ARMi needs camera access so you can take a new profile picture.",
