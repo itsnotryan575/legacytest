@@ -17,7 +17,7 @@ import { AuthService } from '@/services/AuthService';
 
 export default function DeleteAccountSettings() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { isDark } = useTheme();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -33,62 +33,45 @@ export default function DeleteAccountSettings() {
     isDark,
   };
 
-  const handleDeleteAccount = async () => {
+  const handleDeleteAccount = () => {
+    if (isDeleting) return;
+
     Alert.alert(
       'Delete Account',
-      'This action cannot be undone. All your data will be permanently deleted from our servers, including:\n\n• Your account information\n• All profile data\n• RevenueCat subscription data\n• Any active subscriptions\n\nAre you absolutely sure?',
+      'This action is permanent and will remove your account, profile data, reminders, and stored files. You will not be able to recover this data.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: confirmDelete,
-        },
+        { text: 'Continue', style: 'destructive', onPress: confirmDelete },
       ]
     );
   };
 
   const confirmDelete = () => {
     Alert.alert(
-      'Final Confirmation',
-      'Type YES to confirm account deletion',
+      'Final confirmation',
+      'Are you absolutely sure you want to delete your account and all associated data?',
       [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'YES, DELETE',
-          style: 'destructive',
-          onPress: performDelete,
-        },
+        { text: 'No', style: 'cancel' },
+        { text: 'Yes, delete', style: 'destructive', onPress: performDelete },
       ]
     );
   };
 
   const performDelete = async () => {
-    if (!user?.id) {
-      Alert.alert('Error', 'No user session found');
-      return;
-    }
-
     setIsDeleting(true);
 
     try {
-      await AuthService.deleteAccount(user.id);
+      // Session-based: Edge Function reads the current JWT; no userId needed
+      await AuthService.deleteAccount();
 
-      Alert.alert(
-        'Account Deleted',
-        'Your account has been permanently deleted.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/auth/sign-in'),
-          },
-        ]
-      );
+      Alert.alert('Account deleted', 'Your account has been permanently deleted.', [
+        { text: 'OK', onPress: () => router.replace('/auth/sign-in') },
+      ]);
     } catch (error: any) {
       console.error('Delete account error:', error);
       Alert.alert(
         'Error',
-        error.message || 'Failed to delete account. Please try again or contact support.'
+        error?.message || 'Failed to delete account. Please try again in a moment.'
       );
     } finally {
       setIsDeleting(false);
@@ -108,66 +91,33 @@ export default function DeleteAccountSettings() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={[styles.warningCard, { backgroundColor: theme.cardBackground, borderColor: theme.danger }]}>
           <AlertTriangle size={48} color={theme.danger} />
-          <Text style={[styles.warningTitle, { color: theme.danger }]}>
-            Danger Zone
-          </Text>
+          <Text style={[styles.warningTitle, { color: theme.danger }]}>Danger Zone</Text>
           <Text style={[styles.warningText, { color: theme.text }]}>
             Deleting your account is permanent and cannot be undone.
           </Text>
         </View>
 
         <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            What will be deleted
-          </Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>What will be deleted</Text>
 
-          <View style={styles.deletionItem}>
-            <View style={[styles.deletionDot, { backgroundColor: theme.danger }]} />
-            <Text style={[styles.deletionText, { color: theme.primary }]}>
-              Your account and email address
-            </Text>
-          </View>
-
-          <View style={styles.deletionItem}>
-            <View style={[styles.deletionDot, { backgroundColor: theme.danger }]} />
-            <Text style={[styles.deletionText, { color: theme.primary }]}>
-              All profiles and contacts you've created
-            </Text>
-          </View>
-
-          <View style={styles.deletionItem}>
-            <View style={[styles.deletionDot, { backgroundColor: theme.danger }]} />
-            <Text style={[styles.deletionText, { color: theme.primary }]}>
-              All reminders and scheduled texts
-            </Text>
-          </View>
-
-          <View style={styles.deletionItem}>
-            <View style={[styles.deletionDot, { backgroundColor: theme.danger }]} />
-            <Text style={[styles.deletionText, { color: theme.primary }]}>
-              RevenueCat subscription data
-            </Text>
-          </View>
-
-          <View style={styles.deletionItem}>
-            <View style={[styles.deletionDot, { backgroundColor: theme.danger }]} />
-            <Text style={[styles.deletionText, { color: theme.primary }]}>
-              All collected data and analytics
-            </Text>
-          </View>
+          {[
+            'Your account and email identity',
+            'All profiles and contacts you created',
+            'All reminders and scheduled texts',
+            'User-owned files (e.g., profile photos) stored by ARMi',
+            'Any app-side analytics tied to your account',
+          ].map((item) => (
+            <View key={item} style={styles.deletionItem}>
+              <View style={[styles.deletionDot, { backgroundColor: theme.danger }]} />
+              <Text style={[styles.deletionText, { color: theme.primary }]}>{item}</Text>
+            </View>
+          ))}
         </View>
 
         <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Before you go
-          </Text>
-
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Before you go</Text>
           <Text style={[styles.infoText, { color: theme.primary }]}>
-            If you have an active subscription through the App Store or Google Play, please cancel it separately to avoid being charged again.
-          </Text>
-
-          <Text style={[styles.infoText, { color: theme.primary, marginTop: 16 }]}>
-            We're sorry to see you go. If you're experiencing issues, please consider contacting our support team first.
+            If you subscribed via the App Store or Google Play, cancel your subscription there to stop future charges.
           </Text>
         </View>
 
@@ -179,6 +129,7 @@ export default function DeleteAccountSettings() {
           ]}
           onPress={handleDeleteAccount}
           disabled={isDeleting}
+          accessibilityLabel="Delete my account"
         >
           {isDeleting ? (
             <ActivityIndicator color="#FFFFFF" />
@@ -197,9 +148,7 @@ export default function DeleteAccountSettings() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -209,9 +158,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     borderBottomWidth: 1,
   },
-  backButton: {
-    padding: 8,
-  },
+  backButton: { padding: 8 },
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',
@@ -219,14 +166,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 20,
   },
-  headerSpacer: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
+  headerSpacer: { width: 40 },
+  content: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
   warningCard: {
     borderRadius: 12,
     padding: 24,
@@ -234,46 +175,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
   },
-  warningTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  warningText: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  section: {
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  deletionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  deletionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  deletionText: {
-    fontSize: 15,
-    flex: 1,
-  },
-  infoText: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
+  warningTitle: { fontSize: 24, fontWeight: '700', marginTop: 16, marginBottom: 8 },
+  warningText: { fontSize: 16, textAlign: 'center', lineHeight: 22 },
+  section: { borderRadius: 12, padding: 20, marginBottom: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
+  deletionItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  deletionDot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
+  deletionText: { fontSize: 15, flex: 1 },
+  infoText: { fontSize: 15, lineHeight: 22 },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -283,15 +192,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     gap: 8,
   },
-  deleteButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  bottomSpacer: {
-    height: 40,
-  },
+  deleteButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  buttonDisabled: { opacity: 0.6 },
+  bottomSpacer: { height: 40 },
 });
