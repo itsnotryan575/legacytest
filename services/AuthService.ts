@@ -532,15 +532,61 @@ class AuthServiceClass {
 
   async showManageSubscriptions() {
     await this.ensureInitialized();
-    
+
     if (!this.revenueCatInitialized) {
       throw new Error('RevenueCat not initialized');
     }
-    
+
     try {
       await Purchases.showManageSubscriptions();
     } catch (error) {
       console.error('Error showing manage subscriptions:', error);
+      throw error;
+    }
+  }
+
+  async deleteAccount(userId: string) {
+    await this.ensureInitialized();
+
+    try {
+      console.log('Starting account deletion for user:', userId);
+
+      if (this.revenueCatInitialized) {
+        try {
+          console.log('Logging out from RevenueCat...');
+          await Purchases.logOut();
+          await Purchases.invalidateCustomerInfoCache();
+          console.log('RevenueCat cleanup complete');
+        } catch (rcError) {
+          console.error('Failed to clean up RevenueCat:', rcError);
+        }
+      }
+
+      console.log('Deleting user data from Supabase...');
+      const { error: deleteError } = await this.supabase.rpc('delete_user_account', {
+        user_id_to_delete: userId,
+      });
+
+      if (deleteError) {
+        console.error('Error deleting user data:', deleteError);
+        throw new Error(deleteError.message);
+      }
+
+      console.log('User data deleted successfully');
+
+      console.log('Deleting auth user...');
+      const { error: authError } = await this.supabase.auth.admin.deleteUser(userId);
+
+      if (authError) {
+        console.error('Error deleting auth user:', authError);
+      }
+
+      console.log('Signing out...');
+      await this.signOut();
+
+      console.log('Account deletion complete');
+    } catch (error) {
+      console.error('Error during account deletion:', error);
       throw error;
     }
   }

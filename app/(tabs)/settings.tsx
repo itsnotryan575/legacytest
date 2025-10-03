@@ -27,6 +27,7 @@ export default function SettingsScreen() {
     { icon: Share, title: 'Share Studio', subtitle: 'Create and share your ARMi cards', action: 'share' },
     { icon: Palette, title: 'Appearance', subtitle: 'Theme and display options', action: 'appearance' },
     { icon: Info, title: 'About', subtitle: 'App version and information', action: 'about' },
+    { icon: Shield, title: 'Delete Account', subtitle: 'Permanently delete your account', action: 'delete' },
     { icon: LogOut, title: 'Sign Out', subtitle: 'Sign out of your account', action: 'signout' },
   ];
 
@@ -74,6 +75,8 @@ export default function SettingsScreen() {
                   router.push('/settings/notifications');
                 } else if (item.action === 'about') {
                   router.push('/settings/about');
+                } else if (item.action === 'delete') {
+                  router.push('/settings/delete-account');
                 } else if (item.action === 'signout') {
                   handleSignOut();
                 }
