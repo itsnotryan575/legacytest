@@ -415,25 +415,54 @@ class AuthServiceClass {
 
     try {
       console.log('Invoking delete-auth-user…');
-      const { data: fnData, error: fnError } = await this.supabase.functions.invoke('delete-auth-user', {
-        // function reads the current JWT; no body required
+
+      const session = await this.getSession();
+      const accessToken = session?.access_token;
+
+      if (!accessToken) {
+        throw new Error('No access token available');
+      }
+
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/delete-auth-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const responseText = await response.text();
+      console.log('Edge function raw response:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: responseText,
       });
 
-      console.log('Edge function response:', { data: fnData, error: fnError });
+      if (!response.ok) {
+        let errorMessage = 'delete-auth-user failed';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = responseText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
 
-      if (fnError) {
-        console.error('Edge function error details:', JSON.stringify(fnError, null, 2));
-        throw new Error(fnError.message || 'delete-auth-user failed');
+      let fnData;
+      try {
+        fnData = JSON.parse(responseText);
+      } catch {
+        fnData = responseText;
       }
 
       if (fnData?.error) {
         console.error('Edge function returned error in data:', fnData.error);
         throw new Error(fnData.error);
-      }
-
-      if (typeof fnData === 'string' && fnData !== 'ok') {
-        console.error('Edge function returned non-ok body:', fnData);
-        throw new Error(String(fnData));
       }
 
       try {
