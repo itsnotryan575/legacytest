@@ -419,10 +419,18 @@ class AuthServiceClass {
         // function reads the current JWT; no body required
       });
 
+      console.log('Edge function response:', { data: fnData, error: fnError });
+
       if (fnError) {
-        console.error('Edge function error:', fnError);
+        console.error('Edge function error details:', JSON.stringify(fnError, null, 2));
         throw new Error(fnError.message || 'delete-auth-user failed');
       }
+
+      if (fnData?.error) {
+        console.error('Edge function returned error in data:', fnData.error);
+        throw new Error(fnData.error);
+      }
+
       if (typeof fnData === 'string' && fnData !== 'ok') {
         console.error('Edge function returned non-ok body:', fnData);
         throw new Error(String(fnData));
