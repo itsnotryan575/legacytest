@@ -84,7 +84,13 @@ class AuthServiceClass {
   async signUp(email: string, password: string) {
     await this.ensureInitialized();
 
-    const { data, error } = await this.supabase.auth.signUp({ email, password });
+    const { data, error } = await this.supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: undefined,
+      }
+    });
 
     if (error) {
       console.error('Signup error:', error);
@@ -95,6 +101,18 @@ class AuthServiceClass {
       user: data.user ? { id: data.user.id, email: data.user.email, confirmed: data.user.email_confirmed_at } : null,
       session: data.session ? 'exists' : 'null',
     });
+
+    // If email confirmation is required and user isn't confirmed, send OTP
+    if (data.user && !data.user.email_confirmed_at) {
+      console.log('Email not confirmed, sending OTP...');
+      try {
+        await this.sendEmailOtp(email);
+        console.log('OTP sent successfully');
+      } catch (otpError) {
+        console.error('Failed to send OTP:', otpError);
+        // Don't throw - user account was created, they can resend later
+      }
+    }
 
     return data;
   }
